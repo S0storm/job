@@ -1,0 +1,141 @@
+// 求职助手 · 数据模型（PRD §6）
+// 说明：SQLite(开发) / PostgreSQL(生产) 共用同一 schema，不使用 @db.Text 等原生类型以保证可切换。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  nickname     String   @default("求职者")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  resumes  Resume[]
+  jobs     Job[]
+  aiCalls  AiCall[]
+  settings UserSetting?
+
+  @@map("users")
+}
+
+model Resume {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  title      String
+  content    String
+  sourceFile String?  @map("source_file")
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions ResumeVersion[]
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model ResumeVersion {
+  id               String   @id @default(cuid())
+  resumeId         String   @map("resume_id")
+  label            String
+  jdSnapshot       String   @map("jd_snapshot")
+  optimizedContent String   @map("optimized_content")
+  suggestions      Json
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, createdAt])
+  @@map("resume_versions")
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  company   String
+  position  String
+  salary    String?
+  city      String?
+  source    String?
+  jdText    String?  @map("jd_text")
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events    JobEvent[]
+  questions InterviewQa[]
+
+  @@index([userId, status])
+  @@map("jobs")
+}
+
+model JobEvent {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  type      String
+  eventDate DateTime @map("event_date")
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, eventDate])
+  @@map("job_events")
+}
+
+model InterviewQa {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  category  String
+  question  String
+  answer    String
+  keyPoints Json     @map("key_points")
+  mastered  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("interview_qa")
+}
+
+model AiCall {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  scene     String
+  tokensIn  Int      @map("tokens_in")
+  tokensOut Int      @map("tokens_out")
+  cost      Decimal?
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_calls")
+}
+
+// 用户级 AI 配置（PRD §8.1：设置页覆盖默认 Key，AES-256 加密存储）
+model UserSetting {
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  kimiApiKeyEnc     String?  @map("kimi_api_key_enc")
+  model             String   @default("kimi-k2.6")
+  notifyInterview   Boolean  @default(true) @map("notify_interview")
+  notifyNoFeedback  Boolean  @default(true) @map("notify_no_feedback")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}

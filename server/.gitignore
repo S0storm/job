@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.log
+
+# SQLite 开发数据库
+prisma/*.db
+prisma/*.db-journal

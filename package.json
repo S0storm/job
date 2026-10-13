@@ -1,0 +1,13 @@
+{
+  "name": "job-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "description": "求职助手 · web(前端) / server(后端) / shared(共享类型)",
+  "scripts": {
+    "dev:web": "npm --prefix web run dev",
+    "build:web": "npm --prefix web run build",
+    "dev:server": "npm --prefix server run dev",
+    "build:server": "npm --prefix server run build",
+    "db:migrate": "npm --prefix server run prisma:migrate"
+  }
+}
